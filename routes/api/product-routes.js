@@ -6,8 +6,9 @@ const { Product, Category, Tag, ProductTag } = require('../../models');
 // get all products
 router.get('/', (req, res) => {
   // find all products
-  Post.findAll({
-    attributes: ['id', 'product_name', 'price', 'stock', 'created_at'],
+  Product.findAll({
+    attributes: ['id', 'product_name', 'price', 'stock'],
+    // be sure to include its associated Category and Tag data
     include: [
       {
         model: Tag,
@@ -18,8 +19,12 @@ router.get('/', (req, res) => {
         attributes: ['category_name']
       }
     ]
-  });
-  // be sure to include its associated Category and Tag data
+  })
+    .then(dbProductData => res.json(dbProductData))
+    .catch(err => {
+      console.log(err);
+      res.status(500).json(err);
+    });
 });
 
 // get one product
@@ -29,7 +34,8 @@ router.get('/:id', (req, res) => {
     where: {
       id: req.params.id
     },
-    attributes: ['id', 'product_name', 'price', 'stock', 'created_at'],
+    attributes: ['id', 'product_name', 'price', 'stock'],
+    // be sure to include its associated Category and Tag data
     include: [
       {
         model: Category,
@@ -41,7 +47,17 @@ router.get('/:id', (req, res) => {
       }
     ]
   })
-  // be sure to include its associated Category and Tag data
+    .then(dbProductData => {
+      if (!dbProductData) {
+        res.status(404).json ({message: 'No product found with this id'});
+        return;
+      }
+      res.json(dbProductData);
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).json(err);
+    });
 });
 
 // create new product
@@ -51,16 +67,11 @@ router.post('/', (req, res) => {
       product_name: "Basketball",
       price: 200.00,
       stock: 3,
-      tagIds: [1, 2, 3, 4]  ***why are tagIds here?***
+      tagIds: [1, 2, 3, 4] 
     }
   */
-    Product.create({
-      product_name: req.body.product_name,
-      price: req.body.price,
-      stock: req.body.stock
-    })
-  
-    //Product.create(req.body) ***Why is this here?***
+
+    Product.create(req.body)
     .then((product) => {
       // if there's product tags, we need to create pairings to bulk create in the ProductTag model
       if (req.body.tagIds.length) {
